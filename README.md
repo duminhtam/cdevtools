@@ -6,7 +6,7 @@
 <code>scp dev username@yoursite.dev:~/bin/dev</code>
 <code>chmod +x ~/bin/dev</code>
 
-####Or create alias
+#####Or create alias
 
 run cmd
 <code>alias mycdev='~/bin/dev'</code> 
