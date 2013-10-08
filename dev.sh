@@ -7,6 +7,14 @@ if [ "$DEV_EDITOR" = "" ]
   then
     DEV_EDITOR="vim"
 fi
+if [ "$DEV_RESULT_LIMIT" = "" ]
+  then
+    DEV_RESULT_LIMIT=10
+fi
+if [ "$CHOTOT_HOME_PATH" = "" ]
+  then
+    CHOTOT_HOME_PATH="$HOME"
+fi
 # Path overwrite
 if [ "$path_php" = "" ]
   then
@@ -44,34 +52,14 @@ if [ "$path_css" = "" ]
   then
     path_css='-path "./www/css/*"'
 fi
-if [ "$DEV_RESULT_LIMIT" = "" ]
-  then
-    DEV_RESULT_LIMIT=10
-fi
-if [ "$CHOTOT_HOME_PATH" = "" ]
-  then
-    CHOTOT_HOME_PATH="$HOME"
-fi
 
-
-# corlor 
-lgray='\e[1;30m'
-
-green='\e[0;32m'
-blue='\e[0;34m'
-brown='\e[0;33m'
-
-red='\e[0;31m'
-yellow='\e[1;33m'
-cyan='\e[0;36m'
-NC='\e[0m' # No Color
-##########################################\n
+# corlor vars
+lgray='\e[1;30m'; green='\e[0;32m'; blue='\e[0;34m'; brown='\e[0;33m'; red='\e[0;31m';yellow='\e[1;33m';cyan='\e[0;36m';NC='\e[0m' # No Color ##########################################\n
 ### Please stay at project folder root ###\n
 ##########################################\n
-STR_DIR_ERROR="${red}
-Can not fild php, templates, conf, and scripts folders\n
-Please change to project root folder
-${NC}"
+STR_DIR_ERROR="Can not fild php, templates, conf, and scripts folders\n
+Please change to project root folder"
+STR_VAR_ERROR="Name is too short, try > 2 chars"
 STR_SORRY="Not found"
 STR_INPUT="Enter result file No. you want to open or q quit: "
 
@@ -85,7 +73,7 @@ showusage() {
           \t+ ${brown}Options:${NC}
           \t\t- [-u]  find usage of function
           \t\t+ [-m:]  method search
-          \t\t\t- default  ${blue}function${NC}
+          \t\t\t- default  ${blue}function & class${NC}
           \t\t\t- ex:  sql, class
           \t\t+ [-e:]  file extension
           \t\t\t- default  ${blue}php${NC}
@@ -108,26 +96,25 @@ showusage() {
   exit 1
 }
 
-# Default options
+# Default var options
 method='both'
 extension='php'
 open=0
 debug=0
 usage=0
 usage_str='uniq'
+# Grep vars
 surfix_grep=" "
-
-
 mid_grep='.*'
 nsur_grep='.*'
-#eval bash 3
+# Filter
 cmd_function="function"
-cmd_both="[function|class]+"
+cmd_both="[class|function]+"
 cmd_class="class"
 cmd_sql="create"
 cmd_template=""
 cmd_conf=""
-#eval bash 3 surfix
+# Eval bash 3 surfix
 sur_=" "
 sur_template=" "
 sur_function="("
@@ -137,7 +124,7 @@ sur_sql="(|{"
 sur_conf=".|="
 sur_js="{|(|="
 # Get options
-while getopts m:e:u:l:dhou OPTIONS; do
+while getopts :m:e:u:l:dhou OPTIONS; do
     case $OPTIONS in
         m)
             method=$OPTARG;;
@@ -176,12 +163,20 @@ while getopts m:e:u:l:dhou OPTIONS; do
 done
 # Show dir error
 show_error(){
-  echo -e $STR_DIR_ERROR
+  echo -e "${red}### "$1" ###${NC}"
 }
 # Check project root folder
-check(){
+check_root(){
   if [ ! -d "php" ] || [ ! -d "conf" ] || [ ! -d "modules" ] || [ ! -d "templates" ];then
-    show_error
+    show_error "$STR_DIR_ERROR"
+    exit 1
+  fi
+}
+
+validate_var(){
+  chk_string=$1
+  if [ ${#chk_string} -lt 3 ];then
+    show_error "$STR_VAR_ERROR"
     exit 1
   fi
 }
@@ -205,16 +200,18 @@ main(){
     eval filter_str='$cmd_'$filter
   else
     filter_str=''
-    usage_str=" grep -Ev \"function|class\""
+    usage_str=" grep -Ev function|class"
   fi
 
   eval filter_folder='$path_'$fileExtension
   fileExtension="-iname '*$fileExtension*'"
   if [ "$debug" == 1 ]; then
     echo "method|filter_str: "$filter_str
+    echo "mid_grep: "$mid_grep
     echo "filter_folder: "$filter_folder
     echo "usage_str: "$usage_str
     echo "fileExtension: "$fileExtension
+    echo "surfix_grep: "$surfix_grep
     echo "functionName: "$functionName
     echo "function DEV_RESULT_LIMIT: "$DEV_RESULT_LIMIT
     echo "CHOTOT_HOME_PATH: "$CHOTOT_HOME_PATH
@@ -222,50 +219,51 @@ main(){
     exit
   fi
 
-eval find . $fileExtension $filter_folder | xargs grep "$filter_str$mid_grep$functionName$nsur_grep[?$surfix_grep]" -rnisEl | $usage_str | head -n $DEV_RESULT_LIMIT | uniq | while read FILE
-  do
+  eval find . $fileExtension $filter_folder | xargs grep "$filter_str$mid_grep$functionName$nsur_grep[?$surfix_grep]" -rnisEl | $usage_str | head -n $DEV_RESULT_LIMIT | uniq | while read FILE
+    do
 
-    # File list
-    echo -e "${cyan}[$ii] ${NC} ${blue}+ $FILE${NC}"
-    # Function list
-     eval grep --color='always' "\"$filter_str$mid_grep$functionName$nsur_grep[?$surfix_grep]\"" -niE $FILE| while read FUNC 
-      do
-        echo -e "\t - ${cyan}[$ii]${NC} $FUNC"
-      done
-    ((ii = ii+1)) # Num added
-  done
-       iresult=( $(eval find "." $fileExtension $filter_folder | xargs grep "$filter_str$mid_grep$functionName$nsur_grep[?$surfix_grep]" -rniEsl| $usage_str | head -n $DEV_RESULT_LIMIT | uniq) )
-    if [[ "${#iresult[@]}" > 1 ]] # Many result
-      then
-        echo "$STR_INPUT";read line
-        case "$line" in
-          "q")
-            exit
-          ;; 
-          *)
-            if [ "${iresult["$line"]}" != ""  ]; then
-              echo -e "${yellow}[OPEN]${NC} - ${iresult["$line"]}"
-              $DEV_EDITOR ${iresult["$line"]} # (or other editing commands, eg awk... )
-            else
-              echo -e "${red}$STR_SORRY${NC}"
-            fi
-          ;;
-        esac
-    else # One result only
-      if [ "${iresult[0]}" != "" ]; then
-        if [ "$open" == 1 ]; then
-          echo -e "${yellow}[OPEN]${NC} - ${iresult[0]}"
-          $DEV_EDITOR ${iresult[0]} #open the first result
+      # File list
+      echo -e "${cyan}[$ii] ${NC} ${blue}+ $FILE${NC}"
+      # Function list
+       eval grep --color='always' "\"$filter_str$mid_grep$functionName$nsur_grep[?$surfix_grep]\"" -niE $FILE| while read FUNC 
+        do
+          echo -e "\t - ${cyan}[$ii]${NC} $FUNC"
+        done
+      ((ii = ii+1)) # Num added
+    done
+         iresult=( $(eval find "." $fileExtension $filter_folder | xargs grep "$filter_str$mid_grep$functionName$nsur_grep[?$surfix_grep]" -rniEsl| $usage_str | head -n $DEV_RESULT_LIMIT | uniq) )
+      if [[ "${#iresult[@]}" > 1 ]] # Many result
+        then
+          echo "$STR_INPUT";read line
+          case "$line" in
+            "q")
+              exit
+            ;; 
+            *)
+              if [ "${iresult["$line"]}" != ""  ]; then
+                echo -e "${yellow}[OPEN]${NC} - ${iresult["$line"]}"
+                $DEV_EDITOR ${iresult["$line"]} # (or other editing commands, eg awk... )
+              else
+                echo -e "${red}$STR_SORRY${NC}"
+              fi
+            ;;
+          esac
+      else # One result only
+        if [ "${iresult[0]}" != "" ]; then
+          if [ "$open" == 1 ]; then
+            echo -e "${yellow}[OPEN]${NC} - ${iresult[0]}"
+            $DEV_EDITOR ${iresult[0]} #open the first result
+          fi
+        else
+          echo -e "${red}$STR_SORRY${NC}"
         fi
-      else
-        echo -e "${red}$STR_SORRY${NC}"
       fi
-    fi
 }
 
 if [ $# -lt 1 ]
 then
   showusage
 fi
-check
+check_root
+validate_var ${@: -1}
 main ${@: -1}
