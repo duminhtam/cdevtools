@@ -42,9 +42,9 @@ if [ "$path_c" = "" ]
   then
     path_c='-path "./modules/*" -o -path "./platform/*"'  
 fi
-if [ "$path_template" = "" ]
+if [ "$path_templates" = "" ]
   then
-    path_template='-path "./templates/*"' #@todo need to change filter here 
+    path_templates='-path "./templates/*"' #@todo need to change filter here 
 fi
 if [ "$path_www" = "" ]
   then
@@ -102,7 +102,8 @@ showusage() {
           "
   exit 1
 }
-
+set_m=0
+set_e=0
 # Default var options
 method='both'
 extension='php'
@@ -119,11 +120,11 @@ cmd_function="function"
 cmd_both="((class|function) .*)"
 cmd_class="class"
 cmd_sql="((create|function) .*)"
-cmd_template=""
+cmd_templates=""
 cmd_conf=""
 # Eval bash 3 surfix
 sur_=" "
-sur_template=" "
+sur_templates=" "
 sur_function="("
 sur_both="(|{"
 sur_class="(|{"
@@ -134,8 +135,10 @@ sur_js="{|(|="
 while getopts :m:e:u:l:dhonu OPTIONS; do
     case $OPTIONS in
         m)
+            set_m=1
             method=$OPTARG;;
         e)
+            set_e=1
             extension=$OPTARG
             case "$extension" in
               sql)
@@ -214,8 +217,8 @@ main(){
     filter='conf'
   fi
 
-  if [ $extension == "templates" ];then
-    fileExtension='html'
+  if [ $extension == "templates" ] || [ $extension == "tmpl" ] || [ $extension == "html" ];then
+    fileExtension='tmpl'
   fi
 
   eval surfix_grep='$sur_'$filter
@@ -239,6 +242,14 @@ main(){
     fileExtension="-iname '*$fileExtension*'"
     #replace search function name match with *
     functionName=${functionName//\*/.\*}; #rep4func
+    if [ "$set_e" -eq 0 ]; then
+      filter_folder=$path_all
+      fileExtension=" \( -iname '*php*' -o -iname '*tmpl*' -o -iname '*js*' -o -iname '*conf*' \) "
+      if [ "$set_m" -eq 0 ]; then
+        filter_str=""
+        mid_grep=""
+      fi
+    fi
     file_result=( $(eval find . $fileExtension $filter_folder | xargs grep "$filter_str$mid_grep$functionName$nsur_grep[?$surfix_grep]" -rnisEl | $usage_str | head -n $DEV_RESULT_LIMIT | uniq) )
   fi
 
