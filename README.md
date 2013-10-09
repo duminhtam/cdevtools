@@ -29,14 +29,14 @@ Manual connect
 <code>ssh -R 52698:localhost:52698 username@yoursite.dev</code>
 
 
-####RSub plugin and RMate script
+####RSub plugin and st script
 - install Sublime Text2/3 rsub package 
-- add rmate script to remote server
-- <code>scp rmate username@yoursite.dev:~/bin/rmate</code>
-- <code>chmod +x ~/bin/rmate</code>
+- add st script to remote server
+- <code>scp st username@yoursite.dev:~/bin/st</code>
+- <code>chmod +x ~/bin/st</code>
 
 #####Or create alias
 
 run cmd
-<code>alias myvim='~/bin/rmate'</code>and add to
+<code>alias myvim='~/bin/st'</code>and add to
 <code>~/.bashrc </code>
